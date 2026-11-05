@@ -1,39 +1,11 @@
-# MOMO · 生物参数实验室
+# 生物参数编辑器
 
-将社交与运动数据转化成小生物外观的交互 demo。
+在线体验：https://shiqihu838-cry.github.io/chongwu/
 
-## 在线体验
+全屏编辑器，左侧预览宠物，右侧调整参数。宠物使用不透明纯色，角数控制整个身体的圆瓣轮廓（3–16 瓣），手脚与身体使用同一颜色，腿与圆头大脚为一体填充形状。
 
-GitHub Pages：https://shiqihu838-cry.github.io/chongwu/
+参数：颜色、饱和度、体长、胖瘦、角数、手长、腿长、步态和速度。模拟数据模式将聊天频次、互动人数、步数、运动时长和规律性映射到外观。均为演示数据和可调整的设计假设。
 
-## 功能
+使用原生 HTML、CSS、JavaScript 和 SVG，无需安装依赖。直接打开 index.html，或执行 `python -m http.server 8096` 后访问 http://localhost:8096 。
 
-- 五种基础种群：星芒、胶囊、圆形、方形、花朵。
-- 调节颜色、饱和度、体长、胖瘦、角数、手臂长度、腿长与动作速度。
-- 漫步、蹦跳、摇摆、漂浮四种动态步态。
-- 模拟聊天频次、互动人数、步数、运动时长、运动规律性驱动外观。
-- 左侧生物预览，右侧外观和模拟数据参数。
-- 线稿模式、随机生成、暂停与重置。
-- 导出透明 PNG、独立 SVG 与 JSON 参数。
-
-所有数据均为模拟数据，映射为可调整的设计假设，不访问真实账号或运动设备。
-
-## 本地运行
-
-直接打开 `index.html`，或在项目目录运行：
-
-```sh
-python -m http.server 8096
-```
-
-访问 http://localhost:8096 。核心功能无需安装依赖，字体加载失败时使用系统字体。
-
-## 部署
-
-GitHub Pages 发布来源：`main` 分支、根目录 `/`。
-
-将修改提交到 `main` 后，GitHub 自动重新发布。`.nojekyll` 让 GitHub 直接提供静态文件，不执行 Jekyll。
-
-## 调整数据映射
-
-修改 `app.js` 中的 `mapDataToAppearance()`。页面使用原生 HTML、CSS、JavaScript 与参数化 SVG，资源均使用相对路径，兼容 GitHub Pages 的项目子路径。
+GitHub Pages 发布来源为 main 分支根目录，推送后自动更新。映射函数为 app.js 中的 mapDataToAppearance()，轮廓生成函数为 bodyRadius() 与 bodyPath()。

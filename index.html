@@ -2,25 +2,21 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#121313"><meta name="description" content="生物外观参数编辑器">
-  <title>生物参数</title><link rel="stylesheet" href="style.css?v=2">
+  <meta name="theme-color" content="#151515"><meta name="description" content="生物外观参数编辑器">
+  <title>生物参数</title><link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <main class="studio">
     <section class="preview" aria-label="生物预览">
-      <div class="stage"><svg id="creature" viewBox="0 0 700 600" role="img" aria-label="生物"></svg></div>
-      <div class="preview-actions">
-        <button id="pauseBtn" class="icon-button" aria-label="暂停" title="暂停">Ⅱ</button>
-        <button id="outlineBtn" aria-pressed="false" title="切换线稿">线稿</button>
-        <button id="exportBtn">导出 <span aria-hidden="true">↓</span></button>
-      </div>
+      <svg id="creature" viewBox="0 -40 700 690" role="img" aria-label="生物"></svg>
+      <button id="pauseBtn" class="icon-button pause-button" aria-label="暂停" title="暂停">Ⅱ</button>
     </section>
     <aside class="controls" aria-label="参数">
       <div class="panel-top">
         <div class="tabs" role="tablist" aria-label="参数模式"><button id="manualTab" role="tab" aria-controls="manualPanel" aria-selected="true" class="active">外观</button><button id="dataTab" role="tab" aria-controls="dataPanel" aria-selected="false">模拟数据</button></div>
         <div class="panel-actions"><button id="randomBtn" class="icon-button" aria-label="随机" title="随机">⚄</button><button id="resetBtn" class="icon-button" aria-label="重置" title="重置">↶</button></div>
       </div>
-      <div class="base-controls"><div id="speciesList" role="group" aria-label="外形"></div><div id="palette" role="group" aria-label="颜色"></div></div>
+      <div class="base-controls"><div id="palette" role="group" aria-label="颜色"></div></div>
       <div id="manualPanel" role="tabpanel" aria-labelledby="manualTab">
         <div id="appearanceControls"></div>
         <div class="gait-control"><span class="field-label">步态</span><div id="gaitOptions" role="group" aria-label="步态"></div></div>
@@ -29,8 +25,6 @@
       <div id="dataPanel" role="tabpanel" aria-labelledby="dataTab" hidden><div id="dataControls"></div></div>
     </aside>
   </main>
-  <dialog id="exportDialog"><div class="dialog-head"><span>导出</span><button id="closeExport" class="icon-button" aria-label="关闭">×</button></div><div class="export-options"><button id="pngBtn">PNG <span>↓</span></button><button id="svgBtn">SVG <span>↓</span></button><button id="jsonBtn">JSON <span>↓</span></button></div></dialog>
-  <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
