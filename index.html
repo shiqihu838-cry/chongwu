@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7f2"><meta name="description" content="让社交与运动数据，长成你的样子。一个可自由调节的小生物外观实验室。">
+  <title>MOMO · 生物参数实验室</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="MOMO 生物实验室"><span class="brand-mark"><i></i><i></i></span><strong>momo<span>®</span></strong><span class="brand-divider"></span><span class="brand-cn">生物实验室</span></a>
+    <nav aria-label="主导航"><button class="nav-active" id="labNav">外观实验</button><button id="mappingNav">数据映射 <span>↗</span></button></nav>
+    <div class="version"><span></span> PROTOTYPE <b>0.1</b></div>
+  </header>
+  <main>
+    <section class="intro">
+      <div><div class="eyebrow">A LITTLE CREATURE, A LITTLE YOU.</div><h1>让数据，长成你的样子<span>。</span></h1><p>每一次连接，每一步探索，都在悄悄改变它。</p></div>
+      <button class="button secondary" id="exportBtn"><span>↗</span> 导出我的生物</button>
+    </section>
+    <section class="lab" aria-label="生物参数工作台">
+      <div class="world">
+        <div class="world-top"><div><span class="live-dot"></span> LIVE PREVIEW <span class="world-separator">/</span> <span id="specimen">SPECIMEN 001</span></div><button id="gridBtn" class="icon-button" aria-label="切换背景网格" title="切换背景网格">▦</button></div>
+        <div class="species-picker"><span class="tiny-label">基础种群</span><div id="speciesList" role="group" aria-label="基础种群"></div></div>
+        <div class="stage" id="stage">
+          <div class="stage-orbit"></div><span class="coord coord-a">+ 连接正在发生</span><span class="coord coord-b">X 000 · Y 000</span>
+          <svg id="creature" viewBox="0 0 700 600" role="img" aria-label="可以实时调节外观的小生物"></svg>
+          <div class="creature-caption"><span id="creatureName">澄蓝</span><small id="creatureDesc">温柔连接，自在生长</small></div>
+        </div>
+        <div class="world-bottom"><div class="tags"><span id="shapeTag">方形泡泡</span><span id="gaitTag">轻快漫步</span><span class="mode-tag" id="modeTag">手动塑形</span></div><div class="play-controls"><button id="pauseBtn" class="icon-button" aria-label="暂停动画" title="暂停动画">Ⅱ</button><span class="small-divider"></span><button id="outlineBtn" class="icon-button" aria-label="切换草图模式" title="切换草图模式">✎</button></div></div>
+        <div class="world-note"><span>✳</span> 没有标准的样子，每一种变化都属于你。</div>
+      </div>
+      <aside class="controls">
+        <div class="panel-title"><h2>塑造你的生物</h2><button id="resetBtn" class="text-button" title="恢复默认参数">↶ 重置</button></div>
+        <div class="tabs" role="tablist" aria-label="控制模式"><button role="tab" aria-selected="true" id="manualTab" class="active">自由调节</button><button role="tab" aria-selected="false" id="dataTab">数据驱动 <span class="tab-spark">✳</span></button></div>
+        <div id="manualPanel" role="tabpanel" aria-labelledby="manualTab">
+          <div class="control-section"><div class="section-head"><h3>01 <span>色彩与情绪</span></h3><span class="section-note">内在的温度</span></div><div class="palette" id="palette" role="group" aria-label="身体颜色"></div><div class="range-control compact"><label for="saturation">色彩饱和度 <output id="saturationOut"></output></label><input id="saturation" type="range" min="10" max="100" value="70"><div class="range-ends"><span>灰调</span><span>鲜明</span></div></div></div>
+          <div class="control-section"><div class="section-head"><h3>02 <span>身体与轮廓</span></h3><span class="section-note">生长的痕迹</span></div><div id="bodyControls"></div></div>
+          <div class="control-section motion-section"><div class="section-head"><h3>03 <span>肢体与动作</span></h3><span class="section-note">自己的节奏</span></div><div class="range-pair" id="limbControls"></div><label class="select-label" for="gait">行走方式</label><div class="gait-options" id="gaitOptions" role="group" aria-label="行走方式"></div><div class="range-control speed-control"><label for="speed">动作速度 <output id="speedOut"></output></label><input id="speed" type="range" min="15" max="100" value="48"></div></div>
+        </div>
+        <div id="dataPanel" role="tabpanel" aria-labelledby="dataTab" hidden>
+          <div class="data-notice"><span>✳</span><p>用日常，养出独一无二的它。<small>拖动模拟数据，观察外观实时变化。</small></p></div>
+          <div id="dataControls"></div>
+          <div class="data-result"><span>此刻的生长记录</span><p id="growthRecord"></p></div>
+          <button id="rulesBtn" class="text-button mapping-link">查看完整映射规则 ↗</button>
+          <p class="data-footnote">演示使用模拟数据，不读取真实账号。映射是可调整的设计假设，不代表对性格或健康的判断。</p>
+        </div>
+        <button id="randomBtn" class="button random-button"><span>⚄</span> 遇见另一种可能 <span>↗</span></button>
+      </aside>
+    </section>
+    <section class="scenarios"><div class="scenario-heading"><div><span class="eyebrow">LIFE LEAVES A SHAPE.</span><h2>换一种日常，看看它的变化</h2></div><span class="scenario-note">模拟生活切片 <span>↘</span></span></div><div id="scenarioList" class="scenario-list"></div></section>
+    <footer><span>momo / 每个人都有自己的形状</span><span>PARAMETRIC CREATURE LAB · 2026</span><button id="footerRules">关于数据映射 ↗</button></footer>
+  </main>
+  <dialog id="mappingDialog"><div class="dialog-head"><div><span class="eyebrow">FROM DATA TO CREATURE</span><h2>数据如何长成外观</h2></div><button class="icon-button close-dialog" aria-label="关闭映射说明">×</button></div><p class="dialog-intro">这是一套供毕业设计讨论的映射假设。所有数据均经过范围归一化；更改模拟值即可看到结果，后续可以替换成你们的真实数据接口。</p><div class="table-wrap"><table><thead><tr><th>模拟输入</th><th>外观输出</th><th>演示中的设计逻辑</th></tr></thead><tbody id="mappingRows"></tbody></table></div><div class="dialog-note">数据范围和映射函数均可在源码的 <code>mapDataToAppearance()</code> 中调整。运动值不推断现实身体胖瘦，页面体型仅是虚拟形象的视觉表达。</div><button class="button close-dialog dialog-done">知道了，继续实验 ↗</button></dialog>
+  <dialog id="exportDialog"><div class="dialog-head"><div><span class="eyebrow">TAKE YOUR LITTLE YOU.</span><h2>把它带走</h2></div><button class="icon-button close-dialog" aria-label="关闭导出窗口">×</button></div><p class="dialog-intro">保存此刻的外观，或保留参数继续创作。</p><div class="export-options"><button id="pngBtn"><strong>PNG 图片 <span>↗</span></strong><small>1400 × 1200 · 透明背景</small></button><button id="svgBtn"><strong>SVG 矢量 <span>↗</span></strong><small>可在设计工具中继续编辑</small></button><button id="jsonBtn"><strong>JSON 参数 <span>↗</span></strong><small>包含外观参数与模拟数据</small></button></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
