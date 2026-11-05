@@ -1,4 +1,4 @@
-/* MOMO: a dependency-free, data-driven SVG creature prototype. */
+/* Parameter controls and SVG creature renderer. */
 'use strict';
 const $ = id => document.getElementById(id);
 const SPECIES = [
@@ -18,63 +18,44 @@ const DATA_DEFS = [
   {key:'exercise',label:'每日运动时长',max:120,step:5,unit:'分钟',map:'体长 · 虚拟胖瘦',low:'休息一下',high:'舒展身体'},
   {key:'regularity',label:'近一周运动规律性',max:100,step:1,unit:'%',map:'动作节奏',low:'自由随性',high:'规律稳定'}
 ];
-const SCENARIOS = [
-  {name:'安静充电的一天',desc:'少量聊天 · 慢节奏生活',species:'capsule',color:'#efc56c',bg:'#f8f0da',data:{chat:8,people:3,steps:1800,exercise:10,regularity:45}},
-  {name:'与朋友热烈相聚',desc:'丰富互动 · 向外连接',species:'flower',color:'#b495e0',bg:'#eee8f5',data:{chat:85,people:30,steps:5500,exercise:20,regularity:55}},
-  {name:'去公园走一走',desc:'适度社交 · 轻快探索',species:'round',color:'#75cba1',bg:'#e5f1e3',data:{chat:35,people:12,steps:9800,exercise:55,regularity:80}},
-  {name:'今天也活力满格',desc:'高频连接 · 持续运动',species:'star',color:'#ef829d',bg:'#f8e9e8',data:{chat:72,people:25,steps:16800,exercise:95,regularity:95}}
-];
-let state={...DEFAULT}, data={...DATA_DEFAULT}, mode='manual', paused=matchMedia('(prefers-reduced-motion: reduce)').matches, sketch=false, phase=0, frameTime=0, selectedScenario=-1;
+
+let state={...DEFAULT}, data={...DATA_DEFAULT}, mode='manual', paused=matchMedia('(prefers-reduced-motion: reduce)').matches, sketch=false, phase=0, frameTime=0;
 let parts={}, toastTimer, temporaryExpressionUntil=0;
-const fmt = v => Number(v).toLocaleString('zh-CN');
+const fmt=v=>Number(v).toLocaleString('zh-CN');
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
-function escapeXML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));}
-function miniSVG(species,color,legs=false){const s=SPECIES.find(s=>s.id===species)||SPECIES[3];return `<svg viewBox="-8 -6 72 76" aria-hidden="true"><defs><radialGradient id="mini-${s.id}-${legs}"><stop offset="0" stop-color="${color}" stop-opacity=".7"/><stop offset="1" stop-color="${color}"/></radialGradient></defs>${legs?`<path d="M21 43v14h-6m19-14v14h6" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`:''}<path d="${s.icon}" fill="url(#mini-${s.id}-${legs})"/><path d="M23 23v6m11-6v6" fill="none" stroke="white" stroke-width="3.8" stroke-linecap="round"/></svg>`;}
-function makeRange({key,label,min=0,max=100,step=1,left='',right='',unit='%'},parent){parent.insertAdjacentHTML('beforeend',`<div class="range-control"><label for="${key}">${label}<output id="${key}Out"></output></label><input id="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${state[key]}"><div class="range-ends"><span>${left}</span><span>${right}</span></div></div>`);$(key).dataset.unit=unit;$(key).addEventListener('input',e=>{state[key]=+e.target.value;selectedScenario=-1;sync();});}
-function buildUI(){
-  $('speciesList').innerHTML=SPECIES.map(s=>`<button class="species-button" data-species="${s.id}" aria-label="${s.label}" aria-pressed="false">${miniSVG(s.id,s.color)}<span class="tip">${s.label}</span></button>`).join('');
-  $('speciesList').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.species=b.dataset.species;state.color=SPECIES.find(s=>s.id===state.species).color;selectedScenario=-1;sync();}));
-  $('palette').innerHTML=SPECIES.map(s=>`<button class="swatch" style="--swatch:${s.color}" data-color="${s.color}" aria-label="${s.name}色" aria-pressed="false"></button>`).join('')+`<label class="swatch custom" title="自定义颜色"><input id="customColor" type="color" value="${state.color}" aria-label="自定义身体颜色"></label>`;
-  $('palette').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.color=b.dataset.color;selectedScenario=-1;sync();}));
-  $('customColor').addEventListener('input',e=>{state.color=e.target.value;sync();});
-  makeRange({key:'height',label:'体长',min:65,max:160,left:'短短的',right:'高高的'},$('bodyControls'));
-  makeRange({key:'width',label:'胖瘦',min:65,max:150,left:'纤细',right:'圆滚滚'},$('bodyControls'));
-  makeRange({key:'horns',label:'角的个数',min:0,max:8,left:'圆润',right:'多角',unit:' 个'},$('bodyControls'));
-  makeRange({key:'arms',label:'手臂长度',left:'短',right:'长'},$('limbControls'));
-  makeRange({key:'legs',label:'腿的长度',left:'短',right:'长'},$('limbControls'));
-  ['saturation','speed'].forEach(k=>$(k).addEventListener('input',e=>{state[k]=+e.target.value;selectedScenario=-1;sync();}));
-  $('gaitOptions').innerHTML=GAITS.map(g=>`<button data-gait="${g.id}" aria-pressed="false">${g.name}</button>`).join('');
-  $('gaitOptions').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.gait=b.dataset.gait;selectedScenario=-1;sync();}));
-  $('dataControls').innerHTML=DATA_DEFS.map(d=>`<div class="range-control data-control"><label for="data-${d.key}">${d.label}<output id="data-${d.key}Out"></output></label><input type="range" id="data-${d.key}" min="0" max="${d.max}" step="${d.step}" value="${data[d.key]}"><div class="data-mapping"><span>${d.low} → ${d.high}</span><span>↗ ${d.map}</span></div></div>`).join('');
-  DATA_DEFS.forEach(d=>$('data-'+d.key).addEventListener('input',e=>{data[d.key]=+e.target.value;selectedScenario=-1;mapDataToAppearance();sync();}));
-  $('scenarioList').innerHTML=SCENARIOS.map((s,i)=>`<button class="scenario-card" data-scenario="${i}" aria-pressed="false"><span class="scenario-art" style="--bg:${s.bg}">${miniSVG(s.species,s.color,true)}</span><span class="scenario-copy"><strong>${s.name}</strong><small>${s.desc}</small></span><span class="scenario-arrow">↗</span></button>`).join('');
-  $('scenarioList').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>loadScenario(+b.dataset.scenario)));
-  $('mappingRows').innerHTML=[['聊天频次（0–100 次/日）','饱和度、表情','频次增加，颜色更鲜明；表情从平静到开心'],['互动人数（0–40 人/周）','角数、手臂长度','连接范围增加，长出更多触角，手臂向外舒展'],['日均步数（0–20,000 步）','腿长、动作速度、步态','步数增加，腿更长、动作更快；由漂浮、漫步到蹦跳'],['运动时长（0–120 分钟/日）','体长、虚拟胖瘦','运动增加，虚拟身体向上伸展、轮廓更纤细'],['运动规律性（0–100%）','动作节奏','规律性低时节奏有轻微起伏，高时更均匀']].map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+function miniSVG(s){return `<svg viewBox="-8 -6 72 76" aria-hidden="true"><path d="${s.icon}" fill="${s.color}"/><path d="M23 23v6m11-6v6" fill="none" stroke="white" stroke-width="3.8" stroke-linecap="round"/></svg>`;}
+function makeRange(key,label,min,max,parent){
+  parent.insertAdjacentHTML('beforeend',`<div class="range-control"><label for="${key}">${label}<output id="${key}Out"></output></label><input id="${key}" type="range" min="${min}" max="${max}" value="${state[key]}"></div>`);
+  $(key).addEventListener('input',e=>{state[key]=+e.target.value;sync();});
 }
-// Design hypotheses, all normalized against explicit demo ranges. No real-user inference.
+function buildUI(){
+  $('speciesList').innerHTML=SPECIES.map(s=>`<button class="species-button" data-species="${s.id}" aria-label="${s.label}" title="${s.label}" aria-pressed="false">${miniSVG(s)}</button>`).join('');
+  $('speciesList').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.species=b.dataset.species;state.color=SPECIES.find(s=>s.id===state.species).color;sync();});
+  $('palette').innerHTML=SPECIES.map(s=>`<button class="swatch" style="--swatch:${s.color}" data-color="${s.color}" aria-label="${s.name}色" title="${s.name}色" aria-pressed="false"></button>`).join('')+`<label class="swatch custom" title="自定义颜色"><input id="customColor" type="color" value="${state.color}" aria-label="自定义身体颜色"></label>`;
+  $('palette').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.color=b.dataset.color;sync();});
+  $('customColor').oninput=e=>{state.color=e.target.value;sync();};
+  for(const [key,label,min,max] of [['saturation','饱和度',10,100],['height','体长',65,160],['width','胖瘦',65,150],['horns','角数',0,8],['arms','手长',0,100],['legs','腿长',0,100]])makeRange(key,label,min,max,$('appearanceControls'));
+  makeRange('speed','速度',15,100,$('speedControl'));
+  $('gaitOptions').innerHTML=GAITS.map(g=>`<button data-gait="${g.id}" aria-pressed="false">${g.name}</button>`).join('');
+  $('gaitOptions').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.gait=b.dataset.gait;sync();});
+  $('dataControls').innerHTML=DATA_DEFS.map(d=>`<div class="range-control"><label for="data-${d.key}">${d.label}<output id="data-${d.key}Out"></output></label><input type="range" id="data-${d.key}" min="0" max="${d.max}" step="${d.step}" value="${data[d.key]}"></div>`).join('');
+  DATA_DEFS.forEach(d=>$('data-'+d.key).oninput=e=>{data[d.key]=+e.target.value;mapDataToAppearance();sync();});
+}
+// Normalized demo mappings; replace these with the project's research model as needed.
 function mapDataToAppearance(){
   const chat=clamp(data.chat/100,0,1),people=clamp(data.people/40,0,1),steps=clamp(data.steps/20000,0,1),exercise=clamp(data.exercise/120,0,1);
   Object.assign(state,{saturation:Math.round(lerp(24,100,chat)),horns:Math.round(people*8),arms:Math.round(lerp(10,95,people)),legs:Math.round(lerp(10,100,steps)),height:Math.round(lerp(78,150,exercise)),width:Math.round(lerp(135,72,exercise)),speed:Math.round(lerp(20,95,steps)),gait:steps<.15?'float':steps>.65?'bounce':'walk',emotion:chat>.6?'happy':chat<.2?'calm':'curious'});
 }
 function setMode(next){mode=next;if(mode==='data')mapDataToAppearance();sync();}
-function loadScenario(index){const s=SCENARIOS[index];selectedScenario=index;data={...s.data};state.species=s.species;state.color=s.color;mode='data';mapDataToAppearance();sync();toast('已载入「'+s.name+'」的模拟数据');}
-function updateRange(input){const p=(+input.value-+input.min)/(+input.max-+input.min)*100;input.style.setProperty('--fill',p+'%');}
+function updateRange(input){input.style.setProperty('--fill',(+input.value-+input.min)/(+input.max-+input.min)*100+'%');}
 function sync(){
-  ['height','width','horns','arms','legs','saturation','speed'].forEach(k=>{$(k).value=state[k];$(k+'Out').textContent=k==='horns'?state[k]+' 个':k==='speed'?(state[k]/48).toFixed(1)+'×':state[k]+'%';updateRange($(k));});
+  ['height','width','horns','arms','legs','saturation','speed'].forEach(k=>{$(k).value=state[k];$(k+'Out').textContent=k==='horns'?state[k]:k==='speed'?(state[k]/48).toFixed(1)+'×':state[k]+'%';updateRange($(k));});
   $('customColor').value=state.color;
-  document.querySelectorAll('[data-species]').forEach(b=>{const yes=b.dataset.species===state.species;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',yes);});
-  document.querySelectorAll('[data-color]').forEach(b=>{const yes=b.dataset.color.toLowerCase()===state.color.toLowerCase();b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',yes);});
-  document.querySelectorAll('[data-gait]').forEach(b=>{const yes=b.dataset.gait===state.gait;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',yes);});
-  document.querySelectorAll('[data-scenario]').forEach(b=>{const yes=+b.dataset.scenario===selectedScenario;b.classList.toggle('active',yes);b.setAttribute('aria-pressed',yes);});
+  for(const [selector,key,attr,cls] of [['[data-species]','species','species','selected'],['[data-color]','color','color','selected'],['[data-gait]','gait','gait','active']])document.querySelectorAll(selector).forEach(b=>{const yes=b.dataset[attr]===state[key];b.classList.toggle(cls,yes);b.setAttribute('aria-pressed',yes);});
   DATA_DEFS.forEach(d=>{$('data-'+d.key).value=data[d.key];$('data-'+d.key+'Out').textContent=fmt(data[d.key])+' '+d.unit;updateRange($('data-'+d.key));});
   $('manualPanel').hidden=mode!=='manual';$('dataPanel').hidden=mode!=='data';
-  ['manual','data'].forEach(m=>{$(m+'Tab').classList.toggle('active',mode===m);$(m+'Tab').setAttribute('aria-selected',mode===m);$(m+'Tab').tabIndex=mode===m?0:-1;});
-  $('modeTag').textContent=mode==='data'?'数据驱动':'手动塑形';
-  const s=SPECIES.find(s=>s.id===state.species);
-  $('creatureName').textContent=s.name;$('shapeTag').textContent=s.label;$('gaitTag').textContent={walk:'轻快漫步',bounce:'元气蹦跳',sway:'自在摇摆',float:'轻盈漂浮'}[state.gait];
-  $('creatureDesc').textContent=mode==='data'?(data.chat>60?'今天的连接，让我闪闪发光':data.steps>8000?'一起出发，去遇见更多可能':'按自己的节奏，慢慢生长'):'温柔连接，自在生长';
-  $('growthRecord').textContent=`${state.horns} 个小角，${state.arms>55?'舒展':'小巧'}的手臂，${state.legs>55?'修长':'短短'}的腿。${data.chat>60?'颜色正在变得鲜明。':'保持柔和的色彩。'}此刻适合${GAITS.find(g=>g.id===state.gait).name}。`;
+  for(const m of ['manual','data']){$(m+'Tab').classList.toggle('active',mode===m);$(m+'Tab').setAttribute('aria-selected',mode===m);$(m+'Tab').tabIndex=mode===m?0:-1;}
   renderCreature();
 }
 function rgbToHsl(hex){let [r,g,b]=hex.match(/\w\w/g).map(v=>parseInt(v,16)/255);let max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min,h=0,l=(max+min)/2,s=0;if(d){s=d/(1-Math.abs(2*l-1));h=max===r?((g-b)/d)%6:max===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}return[h,s*100,l*100];}
@@ -166,27 +147,25 @@ function download(blob,name){const url=URL.createObjectURL(blob);const a=documen
 function exportSVG(){
   const clone=$('creature').cloneNode(true);clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width','1400');clone.setAttribute('height','1200');clone.removeAttribute('id');clone.removeAttribute('class');clone.removeAttribute('role');clone.removeAttribute('aria-label');
   // Inline sketch styles so the exported file is independent of the page stylesheet.
-  if(sketch){clone.querySelectorAll('.body-color').forEach(p=>{p.setAttribute('fill','#fbfcf6');p.setAttribute('stroke','#4d5b46');p.setAttribute('stroke-width','2');});clone.querySelectorAll('.core-light,.body-highlight').forEach(p=>p.remove());clone.querySelectorAll('.eye,.limb').forEach(p=>p.setAttribute('stroke','#4d5b46'));clone.querySelectorAll('.foot').forEach(p=>{p.setAttribute('fill','#fbfcf6');p.setAttribute('stroke','#4d5b46');p.setAttribute('stroke-width','2');});}
+  if(sketch){clone.querySelectorAll('.body-color').forEach(p=>{p.setAttribute('fill','#e4e8df');p.setAttribute('stroke','#68755f');p.setAttribute('stroke-width','2');});clone.querySelectorAll('.core-light,.body-highlight').forEach(p=>p.remove());clone.querySelectorAll('.eye,.limb').forEach(p=>p.setAttribute('stroke','#68755f'));clone.querySelectorAll('.foot').forEach(p=>{p.setAttribute('fill','#e4e8df');p.setAttribute('stroke','#68755f');p.setAttribute('stroke-width','2');});}
   return new XMLSerializer().serializeToString(clone);
 }
 async function exportPNG(){try{const svg=exportSVG(),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=1200;canvas.getContext('2d').drawImage(img,0,0);URL.revokeObjectURL(url);canvas.toBlob(blob=>{if(blob)download(blob,'momo-creature.png');else toast('图片导出失败，请使用 SVG 格式');},'image/png');}catch{toast('图片导出失败，请使用 SVG 格式');}}
+
 function bindEvents(){
   $('manualTab').onclick=()=>setMode('manual');$('dataTab').onclick=()=>setMode('data');
-  document.querySelector('.tabs').addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setMode(mode==='manual'?'data':'manual');$(mode+'Tab').focus();}});
-  $('resetBtn').onclick=()=>{state={...DEFAULT};data={...DATA_DEFAULT};mode='manual';selectedScenario=-1;phase=0;sync();toast('已恢复初始的小生物');};
-  $('randomBtn').onclick=()=>{const s=SPECIES[Math.floor(Math.random()*SPECIES.length)];if(mode==='data'){DATA_DEFS.forEach(d=>data[d.key]=Math.round(Math.random()*d.max/d.step)*d.step);state.species=s.id;state.color=s.color;mapDataToAppearance();}else{state={species:s.id,color:s.color,saturation:Math.round(35+Math.random()*65),height:Math.round(70+Math.random()*80),width:Math.round(70+Math.random()*70),horns:Math.floor(Math.random()*9),arms:Math.round(Math.random()*100),legs:Math.round(Math.random()*100),gait:GAITS[Math.floor(Math.random()*4)].id,speed:Math.round(25+Math.random()*60),emotion:['curious','happy','calm'][Math.floor(Math.random()*3)]};}selectedScenario=-1;sync();toast('遇见了一个新的小生物');};
+  document.querySelector('.tabs').onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setMode(mode==='manual'?'data':'manual');$(mode+'Tab').focus();}};
+  $('resetBtn').onclick=()=>{state={...DEFAULT};data={...DATA_DEFAULT};mode='manual';phase=0;sync();};
+  $('randomBtn').onclick=()=>{const s=SPECIES[Math.floor(Math.random()*SPECIES.length)];if(mode==='data'){DATA_DEFS.forEach(d=>data[d.key]=Math.round(Math.random()*d.max/d.step)*d.step);state.species=s.id;state.color=s.color;mapDataToAppearance();}else{state={species:s.id,color:s.color,saturation:Math.round(35+Math.random()*65),height:Math.round(70+Math.random()*80),width:Math.round(70+Math.random()*70),horns:Math.floor(Math.random()*9),arms:Math.round(Math.random()*100),legs:Math.round(Math.random()*100),gait:GAITS[Math.floor(Math.random()*4)].id,speed:Math.round(25+Math.random()*60),emotion:['curious','happy','calm'][Math.floor(Math.random()*3)]};}sync();};
   $('pauseBtn').onclick=()=>{paused=!paused;updatePause();};
-  $('outlineBtn').onclick=()=>{sketch=!sketch;$('outlineBtn').setAttribute('aria-pressed',sketch);$('creature').classList.toggle('sketch-mode',sketch);toast(sketch?'已切换为草图轮廓':'已切换为柔光质感');};
-  $('gridBtn').onclick=()=>{const hidden=document.querySelector('.world').classList.toggle('no-grid');$('gridBtn').setAttribute('aria-pressed',!hidden);};
-  ['mappingNav','rulesBtn','footerRules'].forEach(id=>$(id).onclick=()=>$('mappingDialog').showModal());
-  $('labNav').onclick=()=>document.querySelector('.lab').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
+  $('outlineBtn').onclick=()=>{sketch=!sketch;$('outlineBtn').setAttribute('aria-pressed',sketch);$('creature').classList.toggle('sketch-mode',sketch);};
   $('exportBtn').onclick=()=>$('exportDialog').showModal();
-  document.querySelectorAll('.close-dialog').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-  document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}}));
+  $('closeExport').onclick=()=>$('exportDialog').close();
+  $('exportDialog').onclick=e=>{const d=$('exportDialog'),r=d.getBoundingClientRect();if(e.target===d&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))d.close();};
   $('svgBtn').onclick=()=>download(new Blob([exportSVG()],{type:'image/svg+xml;charset=utf-8'}),'momo-creature.svg');
   $('pngBtn').onclick=exportPNG;
   $('jsonBtn').onclick=()=>download(new Blob([JSON.stringify({version:1,appearance:state,mode,simulationData:mode==='data'?data:null,mapping:'demo-design-hypothesis'},null,2)],{type:'application/json'}),'momo-parameters.json');
-  $('creature').addEventListener('click',()=>{temporaryExpressionUntil=performance.now()+1800;renderCreature();toast('它感受到了你的连接 ♡');setTimeout(()=>renderCreature(),1850);});
+  $('creature').onclick=()=>{temporaryExpressionUntil=performance.now()+1800;renderCreature();setTimeout(renderCreature,1850);};
 }
-function updatePause(){$('pauseBtn').textContent=paused?'▷':'Ⅱ';$('pauseBtn').setAttribute('aria-label',paused?'播放动画':'暂停动画');$('pauseBtn').title=paused?'播放动画':'暂停动画';}
+function updatePause(){$('pauseBtn').textContent=paused?'▷':'Ⅱ';$('pauseBtn').setAttribute('aria-label',paused?'播放':'暂停');$('pauseBtn').title=paused?'播放':'暂停';}
 buildUI();bindEvents();sync();updatePause();requestAnimationFrame(tick);
